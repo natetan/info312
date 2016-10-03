@@ -1,0 +1,154 @@
+function inDepthChart(svg, data) {
+    'use strict';
+
+    var width = 1160,
+        height = 320,
+        margin = {
+            top: 20,
+            right: 20,
+            bottom: 20,
+            left: 20
+        }
+
+    svg.attr({
+        width: '100%',
+        viewBox: [0,0,width,height]
+    })
+
+    svg = svg.append('g.in-depth')
+        .translate([margin.left, margin.top])
+
+    width -= margin.left + margin.right
+    height -= margin.top + margin.bottom
+
+    var scores = d3.range(1, 6)
+
+    data = d3.nest()
+        .key(ƒ('school'))
+        .sortKeys(d3.ascending)
+        .key(ƒ('industry'))
+        .key(ƒ('score'))
+        .rollup(ƒ('length'))
+        .entries(data)
+
+    data.forEach(function(d) {
+        d.text = d.key
+    })
+
+    dropDown('in-depth-select-school', data, function(d) {
+        var industries = d.values.map(function(dd) {
+            return {
+                text: dd.key,
+                values: dd.values
+            }
+        })
+
+        render(d.values[0].values)
+
+        d3.selectAll('#in-depth-select-industry li').remove()
+        d3.selectAll('#in-depth-select-industry a').text(industries[0].text)
+
+        dropDown('in-depth-select-industry', industries, function(d) {
+            render(d.values)
+        })
+    })
+
+    d3.select('#in-depth-select-school a').text(data[0].key)
+    d3.select('#in-depth-select-industry a').text(data[0].values[0].key)
+
+    var scoreScale = d3.scale.ordinal().rangeRoundBands([0, width - 180]).domain(scores)
+
+    var wrap = 10
+    var colPad = 25
+
+    var radius = Math.floor((scoreScale.rangeBand() - colPad) / (2 * wrap))
+
+    svg.dataAppend(scores, 'text.num')
+        .translate(function(d) {
+            return [scoreScale(d) - 8, 0]
+        })
+        .attr('fill', '#262626')
+        .attr('dy', 20)
+        .text(ƒ())
+
+    svg.dataAppend(scores, 'line')
+        .translate([(scoreScale(2) - colPad / 2) - 5, 0])
+        .attr({
+            x1: scoreScale,
+            x2: scoreScale,
+            y1: 0,
+            y2: height
+        })
+        .attr('stroke', '#ccc')
+
+    var subTot = svg.dataAppend(scores, 'text.sub-tot')
+        .translate(function(d) {
+            return [scoreScale(d) - 8, height - 30]
+        })
+        .attr('dy', 20)
+
+    svg.append('text.mean-score')
+        .translate(function(d) {
+            return [(scoreScale(5) + scoreScale.rangeBand()) - 8, 0]
+        })
+        .attr('fill', '#262626')
+        .attr('dy', 20)
+        .text('Mean score')
+
+    var tot = svg.append('text.mean')
+        .translate(function(d) {
+            return [(scoreScale(5) + scoreScale.rangeBand()) - 8, height - 30]
+        })
+        .attr('dy', 20)
+        .text('hoho')
+
+    var mean = svg.append('text.tot')
+        .translate(function(d) {
+            return [(scoreScale(5) + scoreScale.rangeBand()) - 8, 40]
+        })
+        .attr('fill', '#00b9e7')
+        .attr('dy', 20)
+        .text('haha')
+
+    var dots = svg.append('g.dots')
+
+    render(data[0].values[0].values)
+
+    function render(counts) {
+        // console.log('inDepthChart#render', counts)
+
+        dots.text('')
+
+        var counts2 = d3.nest().key(ƒ('key'))
+            .rollup(function(d) {
+                return d[0].values
+            })
+            .map(counts)
+
+        dots.dataAppend(counts, 'g')
+            .translate(function(d) {
+                return [scoreScale(d.key), 40]
+            })
+            .dataAppend(ƒ('values', d3.range), 'circle')
+            .attr('r', radius)
+            .attr('cx', function(d) {
+                return (2 * radius + 1) * (d % wrap)
+            })
+            .attr('cy', function(d) {
+                return (2 * radius + 1) * Math.floor(d / wrap)
+            })
+
+        subTot.text(function(d) {
+            return 'Sub-total: ' + (counts2[d] || '0')
+        })
+
+        var totalCount = d3.sum(d3.values(counts2))
+        var totalSum = d3.sum(counts.map(function(d) {
+            return d.values * d.key
+        }))
+
+        tot.text('Total: ' + totalCount)
+        mean.text((totalSum / totalCount).toFixed(2))
+    }
+
+}

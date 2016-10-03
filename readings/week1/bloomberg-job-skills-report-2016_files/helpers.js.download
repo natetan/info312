@@ -1,0 +1,144 @@
+/* color */
+var c24 = ['#33cc33', '#ff0000', '#3366ff', '#00e7b4', '#a6cee3', '#fb9a99', '#b15928', '#b4002f', '#bcbc34', '#393d77', '#ff8200', '#7800a8', '#ff00d7', '#ffc100', '#b2df8a', '#fdb56d', '#cab2d6', '#c39c95', '#29bece', '#cc70bc', '#669c95', '#ff7a9a', '#e3026f', '#006d33']
+var c24h = ['#196619', '#7f0000', '#19337f', '#00735a', '#536771', '#7d4d4c', '#582c14', '#5a0017', '#5d5d1a', '#1c1e3b', '#7f4100', '#3c0054', '#7f006b', '#7f6000', '#586f44', '#7e5a36', '#64586a', '#614e4a', '#145e67', '#66375d', '#334e4a', '#7f3c4d', '#710137', '#003619']
+var palette = ['rgb(248,57,111)', 'rgb(245,183,69)', 'rgb(61,185,235)', 'rgb(70,226,83)', '#767676']
+
+var gray = ['#c6c6c6', '#c6c6c6']
+var blue = '#2800D7'
+var orange = '#FB8E1E'
+
+var color = function(i) {
+    return palette[i % palette.length]
+}
+
+var time = d3.time.format('%b %Y')
+var duration = 400
+
+/* Utils Generic */
+var numf = d3.format(',f')
+var format = d3.time.format("%Y-%m-%d");
+
+function tweenNum(d) {
+    var i = d3.interpolate(this.textContent.replace(/\D/g, ''), d)
+
+    return function(t) {
+        this.textContent = numf(i(t));
+    };
+}
+
+function unSlug(text) {
+    return text.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '')
+}
+
+function toSlug(text) {
+    return text.toLowerCase().replace(/ /g, '-').replace(/\//g, '').replace(/[^\w-]+/g, '')
+}
+
+function isNumeric(n) {
+    return !isNaN(parseFloat(n)) && isFinite(n);
+}
+
+function getJsonFromUrl() {
+    var query = location.search.substr(1);
+    var result = {};
+    query.split("&").forEach(function(part) {
+        var item = part.split("=");
+        result[item[0]] = decodeURIComponent(item[1]);
+    });
+    return result;
+}
+
+Array.prototype.clone = function() {
+    return _.map(this, _.clone)
+}
+
+Date.prototype.getWeek = function() {
+    var onejan = new Date(this.getFullYear(), 0, 1);
+    return Math.ceil((((this - onejan) / 86400000) + onejan.getDay() + 1) / 7);
+}
+
+function padLeft(s) {
+    return ('00' + s).slice(-2)
+}
+
+function componentToHex(c) {
+    var hex = c.toString(16);
+    return hex.length == 1 ? "0" + hex : hex;
+}
+
+function hexToRgb(hex) {
+    // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
+    var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+    hex = hex.replace(shorthandRegex, function(m, r, g, b) {
+        return r + r + g + g + b + b;
+    });
+
+    var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : null;
+
+}
+
+
+function dropDown(id, list, callback) {
+    d3.selection.prototype.first = function() {
+        return d3.select(this[0][0]);
+    }
+
+    var rv = {}
+    rv.index = null
+    rv.current = list[0]
+
+    var lis = d3.select('#' + id + ' ul').selectAll('li').data(list)
+        .enter().append('li')
+        .on('click', function(d) {
+            var el = d3.select(this).select('a')
+            d3.select('#' + id + ' .selection').html(d.text)
+            d3.selectAll('#' + id + ' .selected').classed('selected', false)
+            el.classed('selected', true)
+            rv.current = d
+            if (callback) callback(d)
+        })
+
+    lis.append('a')
+        .classed('droption', true)
+        .attr('data-option', ƒ('text'))
+        .text(ƒ('text'))
+
+    d3.select('#' + id)
+        .on('mouseenter', function() {
+            if (rv.index) clearTimeout(rv.index)
+        })
+        .on('mouseleave', function() {
+            rv.index = setTimeout(function() {
+                rv.closeDrop(id)
+            }, 777)
+        })
+
+    d3.select('#' + id)
+        .on('click', function() {
+            rv.toggleDrop(id)
+        })
+
+    d3.select('#' + id + ' ul li a').first().classed('selected', true).classed('allopt', true)
+
+    rv.toggleDrop = function(id) {
+        var j1d = d3.select('#' + id),
+            test = j1d.classed('open')
+        j1d.classed('open', !test)
+    }
+
+    rv.closeDrop = function(id) {
+        d3.select('#' + id).classed('open', false)
+    }
+
+    return rv
+}
+
+function pluralize(n, singular, plural) {
+    plural = plural || singular + 's'
+    return n + ' ' + (1 == n ? singular : plural)
+}

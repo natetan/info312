@@ -1,0 +1,177 @@
+function slopeChart(svg, data) {
+    'use strict';
+
+    var width = 1160,
+        height = 600,
+        margin = {
+            top: 30,
+            right: 50,
+            bottom: 5,
+            left: 160
+        },
+        plateauWidth = 16
+
+    svg.attr({
+        width: '100%',
+        viewBox: [0,0,width,height]
+    })
+
+    var level
+
+    svg = svg.append('g.slopechart')
+        .classed('selected', true)
+        .translate([margin.left, margin.top])
+
+    width -= margin.left + margin.right
+    height -= margin.top + margin.bottom
+
+    var industries = d3.keys(data[0])
+        .slice(1, 13)
+        .map(function(d, i) {
+            return d.replace(/_.$/, '')
+        })
+
+    var levels = [{
+        label: 'Most important',
+        level: '_w'
+    }, {
+        label: 'Hardest to find',
+        level: '_h'
+    }, ]
+
+    var x = d3.scale.ordinal()
+        .rangeRoundPoints([0, width - plateauWidth])
+        .domain(d3.range(industries.length))
+
+    var y = d3.scale.linear().rangeRound([0, height]).domain([90, 0])
+
+    var line = d3.svg.line()
+        .x(function(d, i) {
+            return x(i)
+        })
+        .y(y)
+        .interpolate(function(d) {
+            return d.join('h' + plateauWidth + ' L') + 'h' + plateauWidth
+        })
+
+    svg.append('g.headings')
+        .selectAll('text')
+        .data(industries)
+        .enter()
+        .append('text')
+        .text(ƒ())
+        .attr('text-anchor', 'middle')
+        .attr('dy', function(d, i) {
+            return i % 2 ? 20 : 0
+        })
+        .attr('x', function(d, i) {
+            return x(i) + plateauWidth / 2
+        })
+
+    var vLines = svg.append('g.v-lines')
+        .selectAll('line')
+        .data(industries)
+        .enter()
+        .append('line')
+        .attr('y1', function(d, i) {
+            return i % 2 ? 25 : 5
+        })
+        .attr('y2', height)
+        .attr('x1', function(d, i) {
+            return x(i) + plateauWidth / 2
+        })
+        .attr('x2', function(d, i) {
+            return x(i) + plateauWidth / 2
+        })
+
+    var skillsG = svg.selectAll('.skill')
+        .data(data)
+
+    var skillsGEnter = skillsG.enter()
+        .append('g.skill')
+        .classed('selected', function(d, i) {
+            return 2 === i
+        })
+        .on('mouseover', function(d) {
+            this.parentElement.appendChild(this)
+            svg.classed('selected', true)
+            skillsG.classed('selected', function(dd) {
+                return dd == d
+            })
+        })
+        .on('mouseout', function() {
+            this.parentElement.appendChild(this)
+            svg.classed('selected', false)
+            skillsG.classed('selected', false)
+        })
+
+    skillsGEnter.append('text.label')
+        .text(ƒ('skill'))
+        .attr('y', 3)
+        .attr('text-anchor', 'end')
+
+    skillsGEnter.append('text')
+        .text(ƒ('2015-rank'))
+        .translate(function(d, i) {
+            return [-10, y(i)]
+        })
+        .attr('y', 15)
+        .attr('text-anchor', 'end')
+
+    skillsGEnter.append('path.hover-line')
+        .call(d3.attachTooltip)
+
+    skillsGEnter.append('path.show-line')
+
+    var btns = d3.select('.slope-buttons')
+        .selectAll('.btn')
+        .data(levels)
+        .enter()
+        .append('span.btn')
+        .text(ƒ('label'))
+        .on('click', setLevel)
+
+    setLevel(levels[0])
+
+    function setLevel(l) {
+        btns.classed('selected', function(d) {
+            return d == l
+        })
+
+        skillsG.selectAll('.label')
+            .transition()
+            .translate(function(d, i) {
+                return [0, y(d['All' + l.level])]
+            })
+
+        vLines.transition()
+            .attr('y2', function(d) {
+                var min = d3.min(data, function(dd) {
+                    return +dd[d + l.level]
+                })
+                return y(min)
+            })
+
+        skillsG.selectAll('.hover-line, .show-line')
+            .transition()
+            .attr('d', function(d, i) {
+                return line(industries.map(function(ind) {
+                    return +d[ind + l.level]
+                }))
+            })
+
+        skillsG.selectAll('.hover-line')
+            .on('mouseover', function(d) {
+                var tmp = d3.mouse(this)[0] / width
+                tmp = Math.round(tmp * (industries.length - 1))
+                var industry = industries[tmp]
+                var html = '<div class="pct">' +
+                    d[industry + l.level] +
+                    '%</div><div class="skill">' +
+                    d.skill + '</div><div class="industry">' +
+                    industry + '</div>'
+                d3.select('.tooltip').html(html)
+            })
+    }
+
+}

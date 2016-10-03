@@ -1,0 +1,249 @@
+'use strict'
+function Scatter (s) {
+  var dragEnabled = false
+  var duration = 400
+  var aspect = 776/1160
+  var rv ={}
+  var current = 'All industries'
+
+  s.el.selectAll('*').remove()
+  var c = d3.conventions({
+    parentSel: s.el,
+    width:s.width,
+    height:s.height,
+    margin:{top: 0, right: 10, bottom: 0, left: 10}
+  })
+  // console.log(c.width)
+  c.rootSVG
+    .attr('width',c.width-c.margin.left*2)
+    .attr('height',c.height)
+    .attr('viewBox','0 0 1160 776')
+
+
+  var industries = d3.keys(s.data[0]).slice(1, 13)
+    .map(function(d, i) {
+      return d.replace(/_.$/, '').split('_')[0]
+    })
+
+  var xVals = []
+  var yVals = []
+
+  var data = d3.nest().key(ƒ('Skill')).rollup(function(d){
+    var o = {}
+    industries.forEach(function(ind) {
+      o[ind] = {
+        skill:d[0].Skill,
+        w_2014:parseInt(d[0][ind+'_w_2014']),
+        w_2015:parseInt(d[0][ind+'_w_2015']),
+        h_2014:parseInt(d[0][ind+'_h_2014']),
+        h_2015:parseInt(d[0][ind+'_h_2015']),
+        industry: ind
+      };
+
+      xVals.push(o[ind][s.x])
+      xVals.push(o[ind][s.xOld])
+      yVals.push(o[ind][s.y])
+      yVals.push(o[ind][s.yOld])
+    })
+    return o
+  }).entries(s.data)
+
+  c.x.domain(d3.extent(xVals)).range([0,1160])
+  c.y.domain(d3.extent(yVals)).range([776, 0])
+
+
+  var xMid = d3.mean(c.x.domain())
+  var yMid = d3.mean(c.y.domain())
+
+  var xMax = c.x.domain()[1]
+  var yMin = c.y.domain()[0]
+
+  var chartG = c.svg.append('g.chart').attr("transform", "translate(" + 0 + "," + c.margin.top/2 + ")")
+  var xax = chartG.append('path.mid.axis').attr('d', ['M', [0, c.y(yMid)], 'H', c.x.range()[1]].join(' '))
+  var yax = chartG.append('path.mid.axis').attr('d', ['M', [c.x(xMid), 0], 'V', c.y.range()[0]].join(' '))
+
+  chartG.append('rect.sweet')
+    .attr('x', c.x(xMid))
+    .attr('y', 0)
+    .attr('width', c.x(xMid))
+    .attr('height', c.y(yMid))
+
+  chartG.append('text.quad-label')
+    .text('Less common, less desired')
+    .attr('x', 0)
+    .attr('y', 0)
+    .attr('dy', 20)
+    .attr('dx', 5)
+
+  chartG.append('text.quad-label')
+    .text('Less common, more desired')
+    .attr('x', c.x(xMax))
+    .attr('y', 0)
+    .attr('dx', -5)
+    .attr('dy', 20)
+    .attr('text-anchor', 'end')
+
+  chartG.append('text.quad-label')
+    .text('A.K.A. ‘The Sweet Spot’ ')
+    .attr('x', c.x(xMax))
+    .attr('y', 0)
+    .attr('dx', -5)
+    .attr('dy', 40)
+    .style('fill', '#00B9E7')
+    .attr('text-anchor', 'end')
+
+  chartG.append('text.quad-label')
+    .text('More common, less desired')
+    .attr('x', 0)
+    .attr('y', c.y(yMin))
+    .attr('dy', -20)
+    .attr('dx', 5)
+
+  chartG.append('text.quad-label')
+    .text('More common, more desired')
+    .attr('x', c.x(xMax))
+    .attr('y', c.y(yMin))
+    .attr('dy', -20)
+    .attr('dx', -5)
+    .attr('text-anchor', 'end')
+
+
+  c.svg.append("defs").append('marker')
+    .attr("id", 'arrowhead')
+    .attr("viewBox", "0 -5 10 10")
+    .attr("refX", 15)
+    .attr("refY", -1.5)
+    .attr("markerWidth", 6)
+    .attr("markerHeight", 6)
+    .attr("orient", "auto")
+    .append("path")
+      .attr("d", "M-5,-7L3,-2L-5,3")
+    // .translate([2,0])
+
+  var lines = chartG.dataAppend(data.map(ƒ('values', current)), 'path.line')
+    .attr('d', function(d){ return ['M', c.x(d[s.xOld]), c.y(d[s.yOld]), 'L', c.x(d[s.x]), c.y(d[s.y])].join(' ') })
+
+  lines
+    .attr("marker-end",  "")
+    .filter(function(d){
+      return this.getTotalLength() > 20
+    })
+    .attr("marker-end",  "url(#arrowhead)")
+
+
+
+  var circles = chartG.dataAppend(data.map(ƒ('values', current)), 'g.circle')
+  var circleOld = circles.append('circle.old')
+    .attr('cx', ƒ(s.xOld, c.x))
+    .attr('cy', ƒ(s.yOld, c.y))
+    .attr('r', 12)
+
+  var circleNew = circles.append('circle.new')
+    .attr('cx', ƒ(s.x, c.x))
+    .attr('cy', ƒ(s.y, c.y))
+    .attr('r', 12)
+
+  var text = circles.append('text')
+      .attr('transform',function(d,i){
+
+        if(!s.pos.hasOwnProperty(current)) s.pos[current] = {}
+        if(!s.pos[current].hasOwnProperty(d.skill)) s.pos[current][d.skill] = {}
+
+        var x = s.pos[current][d.skill].hasOwnProperty('x')? s.pos[current][d.skill].x : c.x(d[s.x])
+        var y = s.pos[current][d.skill].hasOwnProperty('y')? s.pos[current][d.skill].y : c.y(d[s.y])-10
+
+        s.pos[current][d.skill]={x:x,y:y}
+        rv.pos = s.pos
+
+        return 'translate('+ (x) +','+ (y) +')'
+      })
+  text.tspans(function(d){return skills[d.skill]})
+
+  rv.update = function(newKey) {
+    current = newKey
+
+    var aspect = (1160-c.width)*.0005
+
+    lines.data(data.map(ƒ('values', newKey)))
+      .transition()
+      .duration(duration)
+      .ease("cubic-ease-in-out")
+        .attr('d', function(d){ return ['M', c.x(d[s.xOld]), c.y(d[s.yOld]), 'L', c.x(d[s.x]), c.y(d[s.y])].join(' ') })
+        .attr("marker-end",  "")
+        .each('end',function(){
+          d3.select(this)
+          .filter(function(d){
+            return this.getTotalLength() > 20
+          })
+          .attr("marker-end",  "url(#arrowhead)")
+
+        })
+
+    circleOld.data(data.map(ƒ('values', newKey)))
+      .transition()
+      .duration(duration)
+      .ease("cubic-ease-in-out")
+        .attr('cx', ƒ(s.xOld, c.x))
+        .attr('cy', ƒ(s.yOld, c.y))
+
+    circleNew.data(data.map(ƒ('values', newKey)))
+      .transition()
+      .duration(duration)
+      .ease("cubic-ease-in-out")
+        .attr('cx', ƒ(s.x, c.x))
+        .attr('cy', ƒ(s.y, c.y))
+
+
+    text.data(data.map(ƒ('values', newKey)))
+      .transition()
+      .duration(duration)
+      .ease("cubic-ease-in-out")
+        .attr('transform',function(d,i){
+
+          if(!s.pos.hasOwnProperty(current)) s.pos[current] = {}
+          if(!s.pos[current].hasOwnProperty(d.skill)) s.pos[current][d.skill] = {}
+
+          var x = s.pos[current][d.skill].hasOwnProperty('x')? s.pos[current][d.skill].x : c.x(d[s.x])
+          var y = s.pos[current][d.skill].hasOwnProperty('y')? s.pos[current][d.skill].y : c.y(d[s.y])-10
+          s.pos[current][d.skill]={x:x,y:y}
+          rv.pos = s.pos
+
+          return 'translate('+ (x) +','+ (y) +')'
+        })
+  }
+
+  var drag = d3.behavior.drag()
+      .origin(function(d) {
+
+        s.pos[current][d.skill] = {x: c.x(d[s.x]), y: c.y(d[s.y]) }
+        rv.pos = s.pos
+        console.log(rv.pos)
+        return s.pos[current][d.skill]
+
+      })
+      .on("dragstart", dragstarted)
+      .on("drag", dragged)
+      .on("dragend", dragended);
+
+  function dragstarted(d) {
+    this.parentNode.appendChild(this);
+  }
+
+  if(dragEnabled){
+    text.call(drag);
+  }
+
+  function dragged(d) {
+    var x = s.pos[current][d.skill].x = d3.event.x;
+    var y = s.pos[current][d.skill].y = d3.event.y;
+
+    d3.select(this)
+      .attr('transform', function(d) {return "translate(" + x + "," + y + ")"})
+  }
+
+  function dragended(d) {
+
+  }
+
+  return rv
+}

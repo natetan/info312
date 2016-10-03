@@ -1,0 +1,51 @@
+function sweetSpotChart(el, data) {
+    'use strict';
+
+    data = d3.nest()
+        .key(ƒ('industry'))
+        .key(ƒ('skill'))
+        .entries(data)
+
+    data.forEach(function(d) {
+        d.text = d.key
+    })
+
+    dropDown('sweet-spot-select', data, render)
+
+    render(data[0])
+
+    function render(ind) {
+        // console.log('sweetSpotChart#render', ind)
+
+        el.text('')
+
+        var indEnter = el.selectAll('.industry')
+            .data(ind.values)
+            .enter()
+            .append('div.industry')
+
+        indEnter.append('p.industry').text(ƒ('key'))
+
+        indEnter.append('ul')
+            .selectAll('li')
+            .data(function(d) {
+                var t = d.values[0]
+                return [{
+                    rank: t.rank_1,
+                    school: t.school_1
+                }, {
+                    rank: t.rank_2,
+                    school: t.school_2
+                }, {
+                    rank: t.rank_3,
+                    school: t.school_3
+                }]
+            })
+            .enter()
+            .append('li')
+            .html(function(d) {
+                return '<span class="rank">' + d.rank + '</span> <span class="school">' + d.school + '</span>'
+            })
+    }
+
+}

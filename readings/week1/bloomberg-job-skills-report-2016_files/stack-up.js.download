@@ -1,0 +1,147 @@
+function stackUpChart(svg, data) {
+    'use strict';
+
+    var width = 1160,
+        height = 400,
+        margin = {
+            top: 20,
+            right: 20,
+            bottom: 20,
+            left: 20
+        }
+
+    svg.attr({
+        width: '100%',
+        viewBox: [0,0,width,height]
+    })
+
+    svg = svg.append('g.slopechart')
+        .translate([margin.left, margin.top])
+
+    width -= margin.left + margin.right
+    height -= margin.top + margin.bottom
+
+    data.forEach(function(d) {
+        d.avg = +d.avg
+        d.count = +d.count
+    })
+
+    var r = d3.scale.sqrt().range([1, 18]).domain([0, d3.max(data, ƒ('count'))])
+
+    data = d3.nest()
+        .key(ƒ('skill'))
+        .sortKeys(d3.ascending)
+        .entries(data)
+
+    data.forEach(function(d) {
+        d.text = d.key
+    })
+
+    dropDown('stack-up-select', data, function(d) {
+        selectedSkill = d
+        render()
+    })
+
+    var sortOptions = [{
+        name: 'Score',
+        key: 'avg',
+        desc: true
+    }, {
+        name: 'Alphabetical',
+        key: 'school'
+    }]
+
+    var sortBy = sortOptions[0]
+
+    var buttons = d3.select('#stack-up-graphic')
+        .insert('span', '.legend')
+        .selectAll('.btn')
+        .data(sortOptions)
+        .enter()
+        .append('span.btn')
+        .text(ƒ('name'))
+        .on('click', function(d) {
+            sortBy = d
+            render()
+        })
+
+    var scores = d3.range(1, 6)
+
+    var x = d3.scale.linear().rangeRound([0, width])
+    var y = d3.scale.linear().rangeRound([height, 0]).domain(d3.extent(scores))
+
+    var guides = svg.dataAppend(scores, 'g.guide')
+
+    guides.append('line')
+        .attr({
+            x1: x(0),
+            x2: width
+        })
+        .attr('y1', ƒ(y))
+        .attr('y2', ƒ(y))
+
+    guides.append('text')
+        .text(ƒ())
+        .attr({
+            y: ƒ(y),
+            dx: -16,
+            dy: 4
+        })
+
+    var selectedSkill = d3.shuffle(data)[0]
+
+    render(selectedSkill)
+
+    function render() {
+        // console.log('stackUpChart#render', schools)
+
+        buttons.classed('selected', function(d) {
+            return d === sortBy
+        })
+
+        d3.select('#stack-up-select .selection').text(selectedSkill.text)
+        var schools = selectedSkill.values
+
+        schools = _.sortBy(schools, sortBy.key)
+
+        if (sortBy.desc) schools.reverse()
+
+        // console.log(schools)
+
+        x.domain([0, schools.length])
+
+        var schoolEls = svg.selectAll('.school')
+            .data(schools, ƒ('school'))
+
+        // console.log(schoolEls.enter().size())
+
+        schoolEls.enter()
+            .append('circle.school')
+            .attr('r', 1e-6)
+            .call(d3.attachTooltip)
+            .on('mouseover', function(d) {
+                var html = '<div class="avg">' +
+                    d.avg +
+                    '</div><div class="school">' +
+                    d.school + '</div><div class="recruiters">' +
+                    pluralize(d.count, 'recruiter') + '</div>'
+                d3.select('.tooltip').html(html)
+            })
+
+        schoolEls.exit()
+            .transition()
+            .attr('r', 1e-6)
+            .remove()
+
+        schoolEls.transition()
+            .attr('cx', function(d, i) {
+                return x(i)
+            })
+            .attr('cy', ƒ('avg', y))
+            .attr('r', ƒ('count', r))
+
+
+    }
+
+
+}
